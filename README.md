@@ -122,3 +122,10 @@ IMAGE_TAG=1.2.3 docker compose -f compose.prod.yaml up -d   # pin a release (def
 ```
 
 The port is bound to `127.0.0.1`; put a reverse proxy in front. Compose sets `TRUST_PROXY=true` so rate limits use the real client IP.
+
+`Caddyfile` is a ready reverse proxy for Caddy 2 on the same VM: automatic HTTPS, compression, security
+headers, JSON access logs, and an active health check on `/health`. Set the domain with an env var:
+
+```sh
+DOMAIN=mobility.example.org caddy run --config Caddyfile
+```

@@ -1,0 +1,28 @@
+# Reverse proxy for the shared-mobility proximity API (Caddy 2), running on the same VM.
+# The app listens on 127.0.0.1:3000 (compose.prod.yaml); Caddy terminates TLS (automatic HTTPS).
+#
+#   DOMAIN=mobility.example.org caddy run --config Caddyfile
+#
+# Caddy sets X-Forwarded-For itself; the app uses it for per-client rate limiting (TRUST_PROXY=true).
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	reverse_proxy 127.0.0.1:3000 {
+		# Take the app out of rotation while it has no data yet (503 on /health).
+		health_uri /health
+		health_interval 30s
+		health_timeout 5s
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
