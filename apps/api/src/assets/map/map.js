@@ -14,8 +14,8 @@
   const state = {
     center: null, // [lon, lat]
     radius: 200,
-    carRadius: 400,
-    useCarRadius: false,
+    carRadius: 500,
+    useCarRadius: true,
     enabled: new Set(Object.keys(COLORS)),
   };
 
@@ -224,7 +224,7 @@
   bindRange('carRadius', 'carRadiusNumber', 'carRadius');
   // Browsers restore form values on reload: start from what the controls show, not from defaults.
   state.radius = Math.min(1000, Math.max(1, Number($('radiusNumber').value) || 200));
-  state.carRadius = Math.min(1000, Math.max(1, Number($('carRadiusNumber').value) || 400));
+  state.carRadius = Math.min(1000, Math.max(1, Number($('carRadiusNumber').value) || 500));
   state.useCarRadius = $('useCarRadius').checked;
   $('carRadiusRow').hidden = !state.useCarRadius;
   $('useCarRadius').addEventListener('change', (e) => {
