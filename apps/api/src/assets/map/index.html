@@ -28,7 +28,6 @@
       <legend>View</legend>
       <label><input type="radio" name="view" value="points" checked /> Points</label>
       <label><input type="radio" name="view" value="heatmap" /> Heatmap</label>
-      <p class="caption" id="snapshotCaption"></p>
     </fieldset>
 
     <fieldset>
@@ -41,7 +40,10 @@
     </fieldset>
 
     <section id="result" aria-live="polite"></section>
-    <p class="caption" id="dataAge"></p>
+    <footer class="info">
+      <p class="caption" id="dataAge"></p>
+      <p class="caption" id="snapshotCaption"></p>
+    </footer>
   </aside>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="map.js"></script>
