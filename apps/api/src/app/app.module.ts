@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_CONFIG, loadConfig } from '../config/app-config';
+import { ConfigModule } from '../config/config.module';
+import { ProvidersModule } from '../providers/providers.module';
 
 @Module({
-  imports: [],
-  controllers: [],
-  providers: [{ provide: APP_CONFIG, useFactory: () => loadConfig(process.env) }],
+  imports: [ConfigModule, ProvidersModule],
 })
 export class AppModule {}
