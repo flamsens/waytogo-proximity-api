@@ -16,8 +16,9 @@ services:
       # RATE_LIMIT_PER_MINUTE: 120
       # BATCH_RATE_LIMIT_PER_MINUTE: 30
       # ARCHIVE_RETENTION_DAYS: 30   # 0 disables the archive
-      # Behind the reverse proxy, set to true so rate limits apply per real client IP:
-      TRUST_PROXY: 'false'
+      # Rate limits per real client IP via X-Forwarded-For. Safe: the port is only reachable from this host (the proxy).
+      # Set to 'false' if nothing proxies in front.
+      TRUST_PROXY: 'true'
 
 volumes:
   mobility-data:

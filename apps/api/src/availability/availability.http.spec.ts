@@ -57,6 +57,20 @@ describe('availability API', () => {
     },
   );
 
+  it.each([['lat=&lon=3.7&radius=10', 'lat'], ['lat=51&lon=%20&radius=10', 'lon']])('rejects blank coordinate %p', async (params, field) => {
+    const res = await request(app.getHttpServer()).get(`/v1/availability?${params}`).expect(400);
+    expect(JSON.stringify(res.body.message)).toMatch(new RegExp(field));
+  });
+
+  it('rejects non-numeric JSON values in a batch', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/v1/availability/batch')
+      .send({ points: [{ lat: '', lon: true, radius: 10 }] })
+      .expect(400);
+    expect(JSON.stringify(res.body.message)).toMatch(/points\.0\.lat/);
+    expect(JSON.stringify(res.body.message)).toMatch(/points\.0\.lon/);
+  });
+
   it('rejects coordinates out of range', async () => {
     const res = await request(app.getHttpServer()).get('/v1/availability?lat=91&lon=3&radius=10').expect(400);
     expect(JSON.stringify(res.body.message)).toMatch(/lat/);

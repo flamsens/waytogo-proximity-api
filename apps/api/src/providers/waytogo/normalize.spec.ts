@@ -15,6 +15,10 @@ describe('normalizeVehicle', () => {
     expect(p).not.toHaveProperty('propulsion');
     expect(p.recordedAt).toBe(new Date(parseInt('6a85da10', 16) * 1000).toISOString());
   });
+  it('rejects a form factor that is not a plain identifier (e.g. HTML)', () => {
+    const bad = { ...vehicles[1], properties: { ...vehicles[1].properties, vehicleType: { form_factor: '<img src=x onerror=alert(1)>' } } };
+    expect(vehicleFeatureSchema.safeParse(bad).success).toBe(false);
+  });
   it('rejects a feature with invalid coordinates', () => {
     expect(vehicleFeatureSchema.safeParse(vehicles[3]).success).toBe(false);
   });

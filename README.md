@@ -108,4 +108,4 @@ docker compose up -d --build     # builds inside the image; data in the `mobilit
 curl localhost:3000/health
 ```
 
-The port is bound to `127.0.0.1`; put a reverse proxy in front and set `TRUST_PROXY=true`.
+The port is bound to `127.0.0.1`; put a reverse proxy in front. Compose sets `TRUST_PROXY=true` so rate limits use the real client IP.

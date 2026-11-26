@@ -7,6 +7,9 @@
   const OTHER_COLOR = '#59636e';
   const BELGIUM = { center: [4.47, 50.5], zoom: 7 };
   const $ = (id) => document.getElementById(id);
+  /** Escapes text from the API before it goes into HTML (defence in depth against odd upstream data). */
+  const esc = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const label = (ff) => esc(ff.replace(/_/g, ' '));
 
   const state = {
     center: null, // [lon, lat]
@@ -99,7 +102,7 @@
     const totals = {};
     for (const f of features) totals[f.properties.formFactor] = (totals[f.properties.formFactor] || 0) + f.properties.count;
     const lines = Object.entries(totals)
-      .map(([ff, n]) => `<div><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${n} × ${ff.replace('_', ' ')}</div>`)
+      .map(([ff, n]) => `<div><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${esc(n)} × ${label(ff)}</div>`)
       .join('');
     new maplibregl.Popup({ closeButton: true })
       .setLngLat(features[0].geometry.coordinates)
@@ -170,7 +173,7 @@
     $('formFactors').innerHTML = '';
     for (const ff of Object.keys(totals).sort()) {
       const label = document.createElement('label');
-      label.innerHTML = `<input type="checkbox" ${state.enabled.has(ff) ? 'checked' : ''}/> <span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${ff.replace('_', ' ')} (${totals[ff]})`;
+      label.innerHTML = `<input type="checkbox" ${state.enabled.has(ff) ? 'checked' : ''}/> <span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${label(ff)} (${esc(totals[ff])})`;
       label.querySelector('input').addEventListener('change', (e) => {
         if (e.target.checked) state.enabled.add(ff);
         else state.enabled.delete(ff);
@@ -234,13 +237,13 @@
     const body = await res.json();
     if (requestId !== latestRequest) return;
     if (!res.ok) {
-      $('result').innerHTML = `<p class="error">${[].concat(body.message).join(', ')}</p>`;
+      $('result').innerHTML = `<p class="error">${esc([].concat(body.message).join(', '))}</p>`;
       return;
     }
     const rows = Object.entries(body.byFormFactor)
-      .map(([ff, n]) => `<tr><td><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${ff.replace('_', ' ')}</td><td>${n}</td></tr>`)
+      .map(([ff, n]) => `<tr><td><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${label(ff)}</td><td>${esc(n)}</td></tr>`)
       .join('');
-    $('result').innerHTML = `<table>${rows}<tr class="total"><td>Total</td><td>${body.total}</td></tr></table>`;
+    $('result').innerHTML = `<table>${rows}<tr class="total"><td>Total</td><td>${esc(body.total)}</td></tr></table>`;
     $('dataAge').textContent = `Data is ${Math.round(body.data.ageSeconds / 60)} min old.`;
   }
 

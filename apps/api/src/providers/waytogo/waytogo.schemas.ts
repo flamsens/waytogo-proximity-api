@@ -14,7 +14,8 @@ const coordinatesSchema = z.tuple([
 const pointGeometrySchema = z.looseObject({ type: z.literal('Point'), coordinates: coordinatesSchema });
 
 const vehicleTypeSchema = z.looseObject({
-  form_factor: z.string().min(1),
+  // Plain identifiers only (e.g. 'cargo_bicycle'): the value ends up in API responses and the map's HTML.
+  form_factor: z.string().regex(/^[a-z][a-z0-9_]*$/),
   // Propulsion is validated loosely but not used: the API deliberately doesn't expose it.
   propulsion_type: z.string().nullish(),
 });
