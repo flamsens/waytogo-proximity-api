@@ -57,6 +57,8 @@ npx nx run-many -t lint test build
 
 ## API
 
+Full guide with examples: [docs/api.md](docs/api.md). Interactive docs: `/docs`.
+
 | Endpoint | Purpose |
 |---|---|
 | `GET /v1/availability?lat=&lon=&radius=[&carRadius=]` | Vehicles near one point. `radius` (1–1000 m) for all vehicles, optional `carRadius` (1–1000 m) for cars only. |
