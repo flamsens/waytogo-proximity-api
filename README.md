@@ -112,8 +112,13 @@ curl localhost:3000/health
 
 Images are built by GitHub Actions (`.github/workflows/docker-publish.yaml`, after lint/test/build pass)
 and published to `ghcr.io/flamsens/waytogo-proximity-api`: tag `main` on every push to main, and
-`1.2.3`, `1.2`, `1`, `latest` for a git tag `v1.2.3`. Pull requests only build. To run the published
-image instead of building locally, replace `build:` in `docker-compose.yml` with
-`image: ghcr.io/flamsens/waytogo-proximity-api:latest`.
+`1.2.3`, `1.2`, `1`, `latest` for a git tag `v1.2.3`. Pull requests only build. The image is public.
+
+Production runs the published image with `compose.prod.yaml` (no local build):
+
+```sh
+docker compose -f compose.prod.yaml pull && docker compose -f compose.prod.yaml up -d
+IMAGE_TAG=1.2.3 docker compose -f compose.prod.yaml up -d   # pin a release (default tag: main)
+```
 
 The port is bound to `127.0.0.1`; put a reverse proxy in front. Compose sets `TRUST_PROXY=true` so rate limits use the real client IP.
