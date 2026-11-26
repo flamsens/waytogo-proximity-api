@@ -1,0 +1,23 @@
+# Production runtime on a VM: one container, data kept in a named volume.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    # Bound to localhost: put a reverse proxy (TLS) in front of it.
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - mobility-data:/data
+    environment:
+      INGEST_INTERVAL_SECONDS: 3600 # minimum 60
+      # STALE_AFTER_SECONDS: 10800   # default 3 × interval
+      # RATE_LIMIT_PER_MINUTE: 120
+      # BATCH_RATE_LIMIT_PER_MINUTE: 30
+      # ARCHIVE_RETENTION_DAYS: 30   # 0 disables the archive
+      # Behind the reverse proxy, set to true so rate limits apply per real client IP:
+      TRUST_PROXY: 'false'
+
+volumes:
+  mobility-data:

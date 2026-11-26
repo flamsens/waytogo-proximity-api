@@ -54,3 +54,58 @@ npx nx serve api          # run locally on http://localhost:3000
 npx nx test api           # unit + HTTP tests
 npx nx run-many -t lint test build
 ```
+
+## API
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /v1/availability?lat=&lon=&radius=[&carRadius=]` | Vehicles near one point. `radius` (1–1000 m) for all vehicles, optional `carRadius` (1–1000 m) for cars only. |
+| `POST /v1/availability/batch` | Same for up to 100 points: `{"points":[{"id":"a","lat":51.05,"lon":3.72,"radius":200,"carRadius":400}]}` |
+| `GET /v1/points` | All points as GeoJSON (`formFactor`, `count`), used by the map |
+| `GET /health` | Data age per source, stale operators. 503 until data is loaded. Not rate limited. |
+| `GET /docs` | OpenAPI / Swagger UI |
+| `GET /` | Playground map |
+
+```sh
+curl 'http://localhost:3000/v1/availability?lat=51.0545&lon=3.7215&radius=200&carRadius=400'
+# {"query":{...},"total":20,"byFormFactor":{"car":8,"bicycle":12,"cargo_bicycle":0,"scooter":0},"data":{"sources":{...},"ageSeconds":12}}
+```
+
+Errors: `400` invalid input (message names the field), `429` rate limit (120/min per IP, batch 30/min), `503` data not loaded yet.
+
+## Architecture
+
+One NestJS app (`apps/api`), no database:
+
+- `providers/` fetch, validate (zod) and normalize upstream data. To change the source, implement
+  `MobilityProvider` and register it in `providers.module.ts`.
+- `ingest/` runs the providers every `INGEST_INTERVAL_SECONDS`, keeps the last good data per provider,
+  saves it to `SNAPSHOT_PATH` (fast restarts) and archives it.
+- `store/` holds the data in an in-memory KD-tree (KDBush). It sits behind the `MobilityStore`
+  interface; a PostGIS-backed store could replace it in `store.module.ts` without API changes.
+- `availability/`, `points/`, `health/` are the HTTP endpoints; `assets/map/` is the playground map.
+
+## Configuration
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PORT` | 3000 | HTTP port |
+| `UPSTREAM_BASE_URL` | https://map.waytogo.be | waytogo backend |
+| `INGEST_INTERVAL_SECONDS` | 3600 | how often data is refreshed (min 60) |
+| `UPSTREAM_TIMEOUT_MS` | 20000 | per-request timeout |
+| `SNAPSHOT_PATH` | /data/snapshot.json | last snapshot, loaded at startup |
+| `STALE_AFTER_SECONDS` | 3 × interval | `/health` reports `degraded` beyond this age |
+| `STALE_OPERATOR_SECONDS` | 86400 | operators with older data are listed as stale |
+| `RATE_LIMIT_PER_MINUTE` / `BATCH_RATE_LIMIT_PER_MINUTE` | 120 / 30 | per client IP |
+| `BATCH_MAX_POINTS` | 100 | points per batch request |
+| `ARCHIVE_DIR` / `ARCHIVE_INTERVAL_SECONDS` / `ARCHIVE_RETENTION_DAYS` | /data/archive / 3600 / 30 | snapshot history (0 days = off) |
+| `TRUST_PROXY` | false | set `true` behind a reverse proxy so rate limits use the real client IP |
+
+## Docker
+
+```sh
+docker compose up -d --build     # builds inside the image; data in the `mobility-data` volume
+curl localhost:3000/health
+```
+
+The port is bound to `127.0.0.1`; put a reverse proxy in front and set `TRUST_PROXY=true`.
