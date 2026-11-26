@@ -100,15 +100,13 @@
     applyFilter();
   });
 
-  // Click on a dot: show what's there. Click anywhere else: search around that point.
+  // Every click searches around the clicked point; on a dot it also shows what's there.
+  // (At low zoom dots cover most of the map, so a dot click must not swallow the search.)
   map.on('click', (e) => {
+    setCenter([e.lngLat.lng, e.lngLat.lat]);
     const box = [[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]];
     const hits = map.getLayoutProperty('points', 'visibility') === 'none' ? [] : map.queryRenderedFeatures(box, { layers: ['points'] });
-    if (hits.length > 0) {
-      showPointPopup(hits);
-      return;
-    }
-    setCenter([e.lngLat.lng, e.lngLat.lat]);
+    if (hits.length > 0) showPointPopup(hits);
   });
   map.on('mouseenter', 'points', () => (map.getCanvas().style.cursor = 'pointer'));
   map.on('mouseleave', 'points', () => (map.getCanvas().style.cursor = ''));
@@ -120,13 +118,11 @@
     const lines = Object.entries(totals)
       .map(([ff, n]) => `<div><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${esc(n)} × ${ffLabel(ff)}</div>`)
       .join('');
-    new maplibregl.Popup({ closeButton: true })
+    // Anchored below the dot so it doesn't hide the search marker.
+    new maplibregl.Popup({ closeButton: true, anchor: 'top', offset: 8 })
       .setLngLat(features[0].geometry.coordinates)
-      .setHTML(`${lines}<button type="button" class="popup-search">Search around here</button>`)
-      .addTo(map)
-      .getElement()
-      .querySelector('.popup-search')
-      .addEventListener('click', () => setCenter(features[0].geometry.coordinates));
+      .setHTML(lines)
+      .addTo(map);
   }
 
   function setCenter(lngLat) {
