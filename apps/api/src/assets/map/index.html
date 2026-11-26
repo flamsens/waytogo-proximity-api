@@ -11,7 +11,13 @@
   <div id="map"></div>
   <aside id="panel">
     <h1>Shared mobility nearby</h1>
-    <p class="hint">Click the map to choose a location.</p>
+    <p class="hint">Click the map or search an address to choose a location. Click a dot for details.</p>
+
+    <form id="addressForm" role="search">
+      <input id="address" type="search" placeholder="Street and number, municipality" autocomplete="street-address" />
+      <button type="submit">Search</button>
+    </form>
+    <ul id="addressResults"></ul>
 
     <fieldset>
       <legend>Vehicle types</legend>

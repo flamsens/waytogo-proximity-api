@@ -81,9 +81,71 @@
     applyFilter();
   });
 
+  // Click on a dot: show what's there. Click anywhere else: search around that point.
   map.on('click', (e) => {
-    state.center = [e.lngLat.lng, e.lngLat.lat];
+    const box = [[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]];
+    const hits = map.getLayoutProperty('points', 'visibility') === 'none' ? [] : map.queryRenderedFeatures(box, { layers: ['points'] });
+    if (hits.length > 0) {
+      showPointPopup(hits);
+      return;
+    }
+    setCenter([e.lngLat.lng, e.lngLat.lat]);
+  });
+  map.on('mouseenter', 'points', () => (map.getCanvas().style.cursor = 'pointer'));
+  map.on('mouseleave', 'points', () => (map.getCanvas().style.cursor = ''));
+
+  /** Popup listing the vehicles under the cursor (dots at one station can overlap). */
+  function showPointPopup(features) {
+    const totals = {};
+    for (const f of features) totals[f.properties.formFactor] = (totals[f.properties.formFactor] || 0) + f.properties.count;
+    const lines = Object.entries(totals)
+      .map(([ff, n]) => `<div><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${n} × ${ff.replace('_', ' ')}</div>`)
+      .join('');
+    new maplibregl.Popup({ closeButton: true })
+      .setLngLat(features[0].geometry.coordinates)
+      .setHTML(`${lines}<button type="button" class="popup-search">Search around here</button>`)
+      .addTo(map)
+      .getElement()
+      .querySelector('.popup-search')
+      .addEventListener('click', () => setCenter(features[0].geometry.coordinates));
+  }
+
+  function setCenter(lngLat) {
+    state.center = lngLat;
     update();
+  }
+
+  // ---- Address lookup (OpenStreetMap Nominatim) -----------------------------
+  // Searches only on submit, as Nominatim's usage policy allows max 1 request/second.
+  $('addressForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = $('address').value.trim();
+    if (!q) return;
+    const list = $('addressResults');
+    list.innerHTML = '<li class="hint">Searching…</li>';
+    try {
+      const params = new URLSearchParams({ q, format: 'jsonv2', countrycodes: 'be', limit: '5' });
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, { headers: { 'Accept-Language': 'nl,fr,en' } });
+      const results = res.ok ? await res.json() : [];
+      list.innerHTML = results.length ? '' : '<li class="hint">No address found in Belgium.</li>';
+      for (const r of results) {
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = r.display_name;
+        button.addEventListener('click', () => {
+          const lngLat = [Number(r.lon), Number(r.lat)];
+          map.flyTo({ center: lngLat, zoom: 15 });
+          setCenter(lngLat);
+          list.innerHTML = '';
+          $('address').value = r.display_name;
+        });
+        li.append(button);
+        list.append(li);
+      }
+    } catch {
+      list.innerHTML = '<li class="error">Address lookup failed, try again.</li>';
+    }
   });
 
   async function loadPoints() {
