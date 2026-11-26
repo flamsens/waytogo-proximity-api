@@ -9,7 +9,7 @@
   const $ = (id) => document.getElementById(id);
   /** Escapes text from the API before it goes into HTML (defence in depth against odd upstream data). */
   const esc = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-  const label = (ff) => esc(ff.replace(/_/g, ' '));
+  const ffLabel = (ff) => esc(ff.replace(/_/g, ' '));
 
   const state = {
     center: null, // [lon, lat]
@@ -33,15 +33,30 @@
    * Heatmap radius is in screen pixels; convert metres to pixels for every zoom level.
    * Metres per pixel (512 px tiles) = 78271.517 · cos(lat) / 2^zoom; Belgium ≈ 50.8° N.
    */
-  function metersToPixelsExpression(meters) {
-    const atZoom0 = meters / (78271.517 * Math.cos((50.8 * Math.PI) / 180));
-    return ['interpolate', ['exponential', 2], ['zoom'], 0, atZoom0, 22, atZoom0 * 2 ** 22];
+  const PIXELS_PER_METER_AT_ZOOM_0 = 1 / (78271.517 * Math.cos((50.8 * Math.PI) / 180));
+
+  /**
+   * Heatmap radius per vehicle: cars use the car radius (when enabled), everything else the
+   * general radius — the same rule the API uses for counting.
+   */
+  function heatRadiusExpression() {
+    const carMeters = state.useCarRadius ? state.carRadius : state.radius;
+    const atZoom = (zoom) => [
+      'case', ['==', ['get', 'formFactor'], 'car'],
+      carMeters * PIXELS_PER_METER_AT_ZOOM_0 * 2 ** zoom,
+      state.radius * PIXELS_PER_METER_AT_ZOOM_0 * 2 ** zoom,
+    ];
+    return ['interpolate', ['exponential', 2], ['zoom'], 0, atZoom(0), 22, atZoom(22)];
+  }
+
+  function refreshHeatRadius() {
+    if (map.getLayer('heat')) map.setPaintProperty('heat', 'heatmap-radius', heatRadiusExpression());
   }
 
   map.on('load', async () => {
     map.addSource('points', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    // Empty layer used only to keep the heatmap below the points and the search circle.
-    map.addLayer({ id: 'points-anchor', type: 'background', paint: { 'background-opacity': 0 } });
+    // Draw the heatmap below the basemap's labels (first symbol layer), so street names stay readable.
+    const firstLabelLayer = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
     // Proximity heatmap: every vehicle spreads over the selected radius *in metres* (not pixels),
     // all vehicles weigh the same and vehicle types share one colour scale. A shaded spot is
     // within ~radius of shared mobility; darker means more vehicles within reach.
@@ -51,18 +66,19 @@
         'heatmap-weight': 1,
         // Low intensity: one vehicle within reach = light green, many = dark green.
         'heatmap-intensity': 0.12,
-        'heatmap-radius': metersToPixelsExpression(state.radius),
-        'heatmap-opacity': 0.75,
+        'heatmap-radius': heatRadiusExpression(),
+        // Semi-transparent with a capped darkest shade, so streets remain visible in busy areas.
+        'heatmap-opacity': 0.55,
         'heatmap-color': [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
           0.02, 'rgba(199,233,192,0.6)',
           0.3, '#74c476',
-          0.6, '#31a354',
-          1, '#006d2c',
+          0.6, '#41ab5d',
+          1, '#238b45',
         ],
       },
-    }, 'points-anchor');
+    }, firstLabelLayer);
     map.addLayer({
       id: 'points', type: 'circle', source: 'points',
       paint: {
@@ -102,7 +118,7 @@
     const totals = {};
     for (const f of features) totals[f.properties.formFactor] = (totals[f.properties.formFactor] || 0) + f.properties.count;
     const lines = Object.entries(totals)
-      .map(([ff, n]) => `<div><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${esc(n)} × ${label(ff)}</div>`)
+      .map(([ff, n]) => `<div><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${esc(n)} × ${ffLabel(ff)}</div>`)
       .join('');
     new maplibregl.Popup({ closeButton: true })
       .setLngLat(features[0].geometry.coordinates)
@@ -173,7 +189,7 @@
     $('formFactors').innerHTML = '';
     for (const ff of Object.keys(totals).sort()) {
       const label = document.createElement('label');
-      label.innerHTML = `<input type="checkbox" ${state.enabled.has(ff) ? 'checked' : ''}/> <span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${label(ff)} (${esc(totals[ff])})`;
+      label.innerHTML = `<input type="checkbox" ${state.enabled.has(ff) ? 'checked' : ''}/> <span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${ffLabel(ff)} (${esc(totals[ff])})`;
       label.querySelector('input').addEventListener('change', (e) => {
         if (e.target.checked) state.enabled.add(ff);
         else state.enabled.delete(ff);
@@ -202,8 +218,7 @@
     const set = (v) => {
       const value = Math.min(1000, Math.max(1, Number(v) || 1));
       $(sliderId).value = $(numberId).value = state[key] = value;
-      // The proximity heatmap follows the general radius.
-      if (key === 'radius' && map.getLayer('heat')) map.setPaintProperty('heat', 'heatmap-radius', metersToPixelsExpression(value));
+      refreshHeatRadius();
       scheduleUpdate();
     };
     $(sliderId).addEventListener('input', (e) => set(e.target.value));
@@ -211,9 +226,15 @@
   }
   bindRange('radius', 'radiusNumber', 'radius');
   bindRange('carRadius', 'carRadiusNumber', 'carRadius');
+  // Browsers restore form values on reload: start from what the controls show, not from defaults.
+  state.radius = Math.min(1000, Math.max(1, Number($('radiusNumber').value) || 200));
+  state.carRadius = Math.min(1000, Math.max(1, Number($('carRadiusNumber').value) || 400));
+  state.useCarRadius = $('useCarRadius').checked;
+  $('carRadiusRow').hidden = !state.useCarRadius;
   $('useCarRadius').addEventListener('change', (e) => {
     state.useCarRadius = e.target.checked;
     $('carRadiusRow').hidden = !state.useCarRadius;
+    refreshHeatRadius();
     scheduleUpdate();
   });
 
@@ -241,7 +262,7 @@
       return;
     }
     const rows = Object.entries(body.byFormFactor)
-      .map(([ff, n]) => `<tr><td><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${label(ff)}</td><td>${esc(n)}</td></tr>`)
+      .map(([ff, n]) => `<tr><td><span class="swatch" style="background:${COLORS[ff] || OTHER_COLOR}"></span>${ffLabel(ff)}</td><td>${esc(n)}</td></tr>`)
       .join('');
     $('result').innerHTML = `<table>${rows}<tr class="total"><td>Total</td><td>${esc(body.total)}</td></tr></table>`;
     $('dataAge').textContent = `Data is ${Math.round(body.data.ageSeconds / 60)} min old.`;
