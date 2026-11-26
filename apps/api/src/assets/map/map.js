@@ -26,16 +26,40 @@
 
   const colorExpression = ['match', ['get', 'formFactor'], ...Object.entries(COLORS).flat(), OTHER_COLOR];
 
+  /**
+   * Heatmap radius is in screen pixels; convert metres to pixels for every zoom level.
+   * Metres per pixel (512 px tiles) = 78271.517 · cos(lat) / 2^zoom; Belgium ≈ 50.8° N.
+   */
+  function metersToPixelsExpression(meters) {
+    const atZoom0 = meters / (78271.517 * Math.cos((50.8 * Math.PI) / 180));
+    return ['interpolate', ['exponential', 2], ['zoom'], 0, atZoom0, 22, atZoom0 * 2 ** 22];
+  }
+
   map.on('load', async () => {
     map.addSource('points', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    // Empty layer used only to keep the heatmap below the points and the search circle.
+    map.addLayer({ id: 'points-anchor', type: 'background', paint: { 'background-opacity': 0 } });
+    // Proximity heatmap: every vehicle spreads over the selected radius *in metres* (not pixels),
+    // all vehicles weigh the same and vehicle types share one colour scale. A shaded spot is
+    // within ~radius of shared mobility; darker means more vehicles within reach.
     map.addLayer({
       id: 'heat', type: 'heatmap', source: 'points', layout: { visibility: 'none' },
       paint: {
-        'heatmap-weight': ['get', 'count'],
-        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 7, 0.5, 14, 2],
-        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 7, 6, 14, 30],
+        'heatmap-weight': 1,
+        // Low intensity: one vehicle within reach = light green, many = dark green.
+        'heatmap-intensity': 0.12,
+        'heatmap-radius': metersToPixelsExpression(state.radius),
+        'heatmap-opacity': 0.75,
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0, 'rgba(0,0,0,0)',
+          0.02, 'rgba(199,233,192,0.6)',
+          0.3, '#74c476',
+          0.6, '#31a354',
+          1, '#006d2c',
+        ],
       },
-    });
+    }, 'points-anchor');
     map.addLayer({
       id: 'points', type: 'circle', source: 'points',
       paint: {
@@ -45,11 +69,12 @@
       },
     });
     map.addSource('range', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    map.addLayer({ id: 'range-fill', type: 'fill', source: 'range', filter: ['==', ['get', 'kind'], 'all'], paint: { 'fill-color': '#0969da', 'fill-opacity': 0.08 } });
-    map.addLayer({ id: 'range-line', type: 'line', source: 'range', paint: {
-      'line-color': ['match', ['get', 'kind'], 'car', COLORS.car, '#0969da'],
-      'line-width': 2,
-      'line-dasharray': ['match', ['get', 'kind'], 'car', ['literal', [2, 2]], ['literal', [1, 0]]],
+    // Search circle: tinted fill, white casing under a thick outline so it stands out on any background.
+    map.addLayer({ id: 'range-fill', type: 'fill', source: 'range', filter: ['==', ['get', 'kind'], 'all'], paint: { 'fill-color': '#0969da', 'fill-opacity': 0.15 } });
+    map.addLayer({ id: 'range-casing', type: 'line', source: 'range', paint: { 'line-color': '#ffffff', 'line-width': 7 } });
+    map.addLayer({ id: 'range-line', type: 'line', source: 'range', filter: ['==', ['get', 'kind'], 'all'], paint: { 'line-color': '#0550ae', 'line-width': 3.5 } });
+    map.addLayer({ id: 'range-car-line', type: 'line', source: 'range', filter: ['==', ['get', 'kind'], 'car'], paint: {
+      'line-color': COLORS.car, 'line-width': 3.5, 'line-dasharray': [2, 1.5],
     } });
 
     await loadPoints();
@@ -71,7 +96,9 @@
     const health = await (await fetch('/health')).json();
     const fetched = Object.values(health.sources || {}).map((s) => s.fetchedAt).filter(Boolean).sort()[0];
     const when = fetched ? new Date(fetched).toLocaleString() : 'unknown time';
-    $('snapshotCaption').textContent = `Snapshot of ${when}, not an average: free-floating vehicles move during the day.`;
+    $('snapshotCaption').textContent =
+      `Heatmap: shaded areas are within the selected radius of available shared mobility; darker = more vehicles within reach. ` +
+      `Snapshot of ${when}, not an average: free-floating vehicles move during the day.`;
   }
 
   // ---- Controls -------------------------------------------------------------
@@ -110,6 +137,8 @@
     const set = (v) => {
       const value = Math.min(1000, Math.max(1, Number(v) || 1));
       $(sliderId).value = $(numberId).value = state[key] = value;
+      // The proximity heatmap follows the general radius.
+      if (key === 'radius' && map.getLayer('heat')) map.setPaintProperty('heat', 'heatmap-radius', metersToPixelsExpression(value));
       scheduleUpdate();
     };
     $(sliderId).addEventListener('input', (e) => set(e.target.value));
@@ -166,7 +195,10 @@
     return ring;
   }
 
+  let centerMarker = null;
   function drawRange() {
+    centerMarker ??= new maplibregl.Marker({ color: '#0550ae' });
+    centerMarker.setLngLat(state.center).addTo(map);
     const features = [{ type: 'Feature', properties: { kind: 'all' }, geometry: { type: 'Polygon', coordinates: [circle(state.center, state.radius)] } }];
     if (state.useCarRadius) {
       features.push({ type: 'Feature', properties: { kind: 'car' }, geometry: { type: 'Polygon', coordinates: [circle(state.center, state.carRadius)] } });
