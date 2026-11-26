@@ -16,7 +16,7 @@ const pointGeometrySchema = z.looseObject({ type: z.literal('Point'), coordinate
 const vehicleTypeSchema = z.looseObject({
   form_factor: z.string().min(1),
   // Propulsion is validated loosely but not used: the API deliberately doesn't expose it.
-  propulsion_type: z.string().optional(),
+  propulsion_type: z.string().nullish(),
 });
 
 /** One free-floating vehicle from `GET /api/vehicles`. */

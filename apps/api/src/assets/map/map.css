@@ -1,0 +1,35 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --accent: #0969da;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161b22; --fg: #e6edf3; --muted: #9198a1; --border: #3d444d; --accent: #4493f8; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+#map { position: absolute; inset: 0; }
+#panel {
+  position: absolute; top: 12px; left: 12px; width: 300px; max-height: calc(100% - 24px); overflow-y: auto; overflow-x: hidden;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px;
+}
+h1 { font-size: 16px; margin: 0 0 4px; }
+fieldset { border: 0; border-top: 1px solid var(--border); margin: 8px 0 0; padding: 8px 0 0; }
+legend { font-weight: 600; padding: 0; }
+label { display: block; margin: 4px 0; }
+.range { display: flex; align-items: center; gap: 6px; }
+.range input[type='range'] { flex: 1; }
+.range input[type='number'] { width: 64px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+.hint, .caption { color: var(--muted); margin: 4px 0; }
+#result table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+#result td { padding: 2px 0; border-bottom: 1px solid var(--border); }
+#result td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+#result .total td { font-weight: 600; border-bottom: 0; }
+.error { color: #cf222e; }
+/* Phones: panel becomes a bottom sheet. */
+@media (max-width: 600px) {
+  #panel { top: auto; bottom: 0; left: 0; width: 100%; max-height: 45%; border-radius: 8px 8px 0 0; }
+}

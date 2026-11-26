@@ -28,7 +28,7 @@ describe('waytogo providers', () => {
     const result = await provider.fetchPoints(signal());
     expect(provider.id).toBe('waytogo-stations');
     expect(fetchMock.mock.calls[0][0]).toBe('https://map.waytogo.be/api/stations');
-    expect(result.points.reduce((s, p) => s + p.count, 0)).toBe(7 + 5 + 2 + 1 + 3 + 4 + 2 + 1);
+    expect(result.points.reduce((s, p) => s + p.count, 0)).toBe(7 + 5 + 2 + 1 + 3 + 4 + 2 + 1 + 1);
   });
 
   it('rejects on HTTP errors', async () => {

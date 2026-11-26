@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shared mobility nearby</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <link rel="stylesheet" href="map.css" />
+</head>
+<body>
+  <div id="map"></div>
+  <aside id="panel">
+    <h1>Shared mobility nearby</h1>
+    <p class="hint">Click the map to choose a location.</p>
+
+    <fieldset>
+      <legend>Vehicle types</legend>
+      <div id="formFactors"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>View</legend>
+      <label><input type="radio" name="view" value="points" checked /> Points</label>
+      <label><input type="radio" name="view" value="heatmap" /> Heatmap</label>
+      <p class="caption" id="snapshotCaption"></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Range</legend>
+      <label class="range">Radius <input id="radius" type="range" min="1" max="1000" value="200" />
+        <input id="radiusNumber" type="number" min="1" max="1000" value="200" /> m</label>
+      <label><input id="useCarRadius" type="checkbox" /> Separate car radius</label>
+      <label class="range" id="carRadiusRow" hidden>Cars <input id="carRadius" type="range" min="1" max="1000" value="400" />
+        <input id="carRadiusNumber" type="number" min="1" max="1000" value="400" /> m</label>
+    </fieldset>
+
+    <section id="result" aria-live="polite"></section>
+    <p class="caption" id="dataAge"></p>
+  </aside>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="map.js"></script>
+</body>
+</html>

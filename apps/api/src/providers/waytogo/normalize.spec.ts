@@ -37,6 +37,7 @@ describe('normalizeStation', () => {
   it('accepts a missing propulsion type', () => {
     expect(normalizeStation(station('cozy-bike'), fallback)).toEqual([expect.objectContaining({ formFactor: 'bicycle', count: 1, source: 'station' })]);
   });
+  it('accepts a null propulsion type (cozywheels)', () => expect(counts('cozy-cargo')).toEqual([1]));
   it('drops empty docks', () => expect(counts('villo-empty')).toEqual([]));
   it('handles stations without vehicles', () => expect(counts('no-vehicles')).toEqual([]));
   it('rejects null coordinates', () => {

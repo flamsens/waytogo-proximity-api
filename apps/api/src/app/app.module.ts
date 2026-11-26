@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'node:path';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AvailabilityModule } from '../availability/availability.module';
 import { APP_CONFIG, AppConfig } from '../config/app-config';
@@ -25,6 +27,8 @@ import { PointsModule } from '../points/points.module';
     AvailabilityModule,
     PointsModule,
     HealthModule,
+    // Playground map (static files copied to dist by the Nx build).
+    ServeStaticModule.forRoot({ rootPath: join(__dirname, 'assets', 'map'), exclude: ['/v1/{*path}', '/health', '/docs{*path}'] }),
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
