@@ -1,0 +1,6 @@
+[
+  {"geometry":{"type":"Point","coordinates":[4.390966,51.213369]},"_id":"6a85da106c87bc76b83bea65","type":"Feature","properties":{"vehicle_id":"23bc6106-fb00-4b3a-91aa-fdfab4cf7273","vehicleType":{"form_factor":"scooter","propulsion_type":"electric"},"operator":"lime","commune":"Antwerpen"}},
+  {"geometry":{"type":"Point","coordinates":[3.7215,51.0545]},"_id":"6b26e3a06c87bc76b83bea66","type":"Feature","properties":{"vehicle_id":"v-dott-1","vehicleType":{"form_factor":"bicycle","propulsion_type":"electric_assist"},"operator":"dott","commune":"Gent"}},
+  {"geometry":{"type":"Point","coordinates":[4.3517,50.8466]},"_id":"6b26e3a06c87bc76b83bea67","type":"Feature","properties":{"vehicle_id":"v-poppy-1","vehicleType":{"form_factor":"car","propulsion_type":"combustion","vehicle_accessories":["automatic"]},"operator":"poppy","commune":"Brussel"}},
+  {"geometry":{"type":"Point","coordinates":[null,51.0]},"_id":"6b26e3a06c87bc76b83bea68","type":"Feature","properties":{"vehicle_id":"v-bad","vehicleType":{"form_factor":"scooter","propulsion_type":"electric"},"operator":"bolt","commune":"Gent"}}
+]
