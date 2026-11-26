@@ -1,0 +1,36 @@
+name: Build
+
+# Lint, test and build on every push/PR; publish the image to ghcr.io from main and version tags.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx nx run-many -t lint test build
+        env:
+          NX_DAEMON: 'false'
+          NX_NO_CLOUD: 'true'
+
+  publish:
+    needs: test
+    permissions:
+      contents: read
+      packages: write # also needed for PR builds: the shared workflow reads its cache from ghcr.io
+    uses: GhentCDH/.github/.github/workflows/ghcr-publish.yaml@v1
+    with:
+      image: flamsens/waytogo-proximity-api
+      file: apps/api/Dockerfile
+      push: ${{ github.event_name != 'pull_request' }}
