@@ -4,7 +4,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AvailabilityModule } from '../availability/availability.module';
 import { APP_CONFIG, AppConfig } from '../config/app-config';
 import { ConfigModule } from '../config/config.module';
+import { HealthModule } from '../health/health.module';
 import { IngestModule } from '../ingest/ingest.module';
+import { PointsModule } from '../points/points.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { IngestModule } from '../ingest/ingest.module';
     }),
     IngestModule,
     AvailabilityModule,
+    PointsModule,
+    HealthModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
